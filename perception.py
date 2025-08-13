@@ -3,9 +3,9 @@ import io
 import time
 from typing import Any, Dict, List
 
-import atspi
-import pyautogui
-from gi.repository.Atspi import Accessible
+import atspi # type: ignore
+import pyautogui # type: ignore
+from gi.repository.Atspi import Accessible # type: ignore
 
 # 简单的日志记录
 def log(message: str):
@@ -49,7 +49,7 @@ def traverse_desktop(node: Accessible, level: int = 0) -> List[Dict[str, Any]]:
             child = node.get_child_at_index(i)
             elements.extend(traverse_desktop(child, level + 1))
 
-    except Exception as e:
+    except Exception as e:  # noqa: F841
         # AT-SPI 可能会对某些元素抛出异常，忽略它们
         # log(f"Error traversing node: {e}")
         pass
