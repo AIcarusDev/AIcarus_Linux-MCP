@@ -20,6 +20,23 @@ TOOL_MAP = {
     "key_tool": action.key_tool,
 }
 
+async def connect_to_core():
+    uri = "ws://host.docker.internal:8077" # 在 Docker 中，使用 host.docker.internal 访问宿主机
+    while True:
+        try:
+            log(f"Attempting to connect to AIcarus Core at {uri}...")
+            async with websockets.connect(uri) as websocket:
+                log("Successfully connected to AIcarus Core.")
+                await handler(websocket, "/")
+        except (websockets.exceptions.ConnectionClosedError, ConnectionRefusedError) as e:
+            log(f"Connection to Core failed: {e}. Retrying in 10 seconds...")
+            await asyncio.sleep(10)
+        except Exception as e:
+            log(f"An unexpected error occurred in connect_to_core: {e}")
+            log(traceback.format_exc())
+            await asyncio.sleep(10)
+
+
 async def handler(websocket: WebSocketServerProtocol, path: str):
     """处理单个 WebSocket 连接。"""
     log(f"Client connected from {websocket.remote_address}")
@@ -113,12 +130,8 @@ async def handler(websocket: WebSocketServerProtocol, path: str):
 
 
 async def main():
-    """启动 WebSocket 服务器。"""
-    host = "0.0.0.0"
-    port = 8078 # 使用一个与 Core 不同的端口
-    log(f"Starting Linux-MCP WebSocket server on ws://{host}:{port}")
-    async with websockets.serve(handler, host, port, max_size=50 * 1024 * 1024):
-        await asyncio.Future()  # run forever
+    """启动 WebSocket 服务器（改为启动客户端）。"""
+    await connect_to_core()
 
 if __name__ == "__main__":
     try:
