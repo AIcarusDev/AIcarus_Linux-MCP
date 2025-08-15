@@ -3,13 +3,15 @@ import io
 import time
 from typing import Any, Dict, List
 
-import atspi # type: ignore
-import pyautogui # type: ignore
-from gi.repository.Atspi import Accessible # type: ignore
+import atspi  # type: ignore
+import pyautogui  # type: ignore
+from gi.repository.Atspi import Accessible  # type: ignore
+
 
 # 简单的日志记录
 def log(message: str):
     print(f"[Perception] {message}")
+
 
 def traverse_desktop(node: Accessible, level: int = 0) -> List[Dict[str, Any]]:
     """递归遍历 AT-SPI 树，收集所有可交互的 UI 元素。"""
@@ -17,16 +19,26 @@ def traverse_desktop(node: Accessible, level: int = 0) -> List[Dict[str, Any]]:
     try:
         # 过滤掉不可见或不可用的元素
         state_set = node.get_state_set()
-        if not state_set.contains(atspi.STATE_VISIBLE) or not state_set.contains(atspi.STATE_ENABLED):
+        if not state_set.contains(atspi.STATE_VISIBLE) or not state_set.contains(
+            atspi.STATE_ENABLED
+        ):
             return []
 
         role_name = node.get_role_name()
         name = node.get_name()
 
         # 过滤掉一些通常无用的容器或布局元素
-        ignored_roles = {'filler', 'panel', 'scroll pane', 'viewport', 'tool bar', 'menu bar', 'frame'}
+        ignored_roles = {
+            "filler",
+            "panel",
+            "scroll pane",
+            "viewport",
+            "tool bar",
+            "menu bar",
+            "frame",
+        }
         if role_name in ignored_roles:
-            pass # 仍然遍历其子节点
+            pass  # 仍然遍历其子节点
         else:
             # 获取元素的精确屏幕坐标和大小
             extents = node.get_extents(atspi.CoordType.SCREEN)
@@ -40,7 +52,12 @@ def traverse_desktop(node: Accessible, level: int = 0) -> List[Dict[str, Any]]:
                     "type": role_name,
                     "coords": (center_x, center_y),
                     "size": (extents.width, extents.height),
-                    "full_coords": (extents.x, extents.y, extents.width, extents.height)
+                    "full_coords": (
+                        extents.x,
+                        extents.y,
+                        extents.width,
+                        extents.height,
+                    ),
                 }
                 elements.append(element_info)
 
@@ -55,6 +72,7 @@ def traverse_desktop(node: Accessible, level: int = 0) -> List[Dict[str, Any]]:
         pass
 
     return elements
+
 
 def get_ui_state() -> Dict[str, Any]:
     """
@@ -72,16 +90,24 @@ def get_ui_state() -> Dict[str, Any]:
         interactive_elements = []
         informative_elements = []
 
-        interactive_roles = {'push button', 'check box', 'radio button', 'link', 'text', 'entry', 'password text'}
+        interactive_roles = {
+            "push button",
+            "check box",
+            "radio button",
+            "link",
+            "text",
+            "entry",
+            "password text",
+        }
 
         label_counter = 0
         for el in all_elements:
             # 过滤掉没有名字且类型不重要的元素
-            if el['name'] == 'Unnamed' and el['type'] not in interactive_roles:
+            if el["name"] == "Unnamed" and el["type"] not in interactive_roles:
                 continue
 
-            if el['type'] in interactive_roles:
-                el['label'] = label_counter
+            if el["type"] in interactive_roles:
+                el["label"] = label_counter
                 interactive_elements.append(el)
                 label_counter += 1
             else:
@@ -91,18 +117,20 @@ def get_ui_state() -> Dict[str, Any]:
         screenshot = pyautogui.screenshot()
         buffer = io.BytesIO()
         screenshot.save(buffer, format="PNG")
-        screenshot_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        screenshot_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
         end_time = time.time()
-        log(f"UI state captured in {end_time - start_time:.2f} seconds. Found {len(interactive_elements)} interactive elements.")
+        log(
+            f"UI state captured in {end_time - start_time:.2f} seconds. Found {len(interactive_elements)} interactive elements."
+        )
 
         return {
-            "focused_app_name": "Unknown", # AT-SPI 获取焦点应用较复杂，暂留
-            "open_apps": [], # 同上
+            "focused_app_name": "Unknown",  # AT-SPI 获取焦点应用较复杂，暂留
+            "open_apps": [],  # 同上
             "interactive_elements": interactive_elements,
             "informative_elements": informative_elements,
-            "scrollable_elements": [], # 暂不实现
-            "screenshot_b64": screenshot_b64
+            "scrollable_elements": [],  # 暂不实现
+            "screenshot_b64": screenshot_b64,
         }
     except Exception as e:
         log(f"FATAL: Failed to get UI state: {e}")

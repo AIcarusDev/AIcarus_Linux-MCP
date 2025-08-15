@@ -8,9 +8,11 @@ from websockets.server import WebSocketServerProtocol
 import action
 import perception
 
+
 # 简单的日志记录
 def log(message: str):
     print(f"[Main] {message}")
+
 
 # 将我们的工具函数映射到一个字典中，方便调用
 TOOL_MAP = {
@@ -20,15 +22,19 @@ TOOL_MAP = {
     "key_tool": action.key_tool,
 }
 
+
 async def connect_to_core():
-    uri = "ws://host.docker.internal:8077" # 在 Docker 中，使用 host.docker.internal 访问宿主机
+    uri = "ws://host.docker.internal:8077"  # 在 Docker 中，使用 host.docker.internal 访问宿主机
     while True:
         try:
             log(f"Attempting to connect to AIcarus Core at {uri}...")
             async with websockets.connect(uri) as websocket:
                 log("Successfully connected to AIcarus Core.")
                 await handler(websocket, "/")
-        except (websockets.exceptions.ConnectionClosedError, ConnectionRefusedError) as e:
+        except (
+            websockets.exceptions.ConnectionClosedError,
+            ConnectionRefusedError,
+        ) as e:
             log(f"Connection to Core failed: {e}. Retrying in 10 seconds...")
             await asyncio.sleep(10)
         except Exception as e:
@@ -47,13 +53,9 @@ async def handler(websocket: WebSocketServerProtocol, path: str):
         "content": [
             {
                 "type": "meta.lifecycle",
-                "data": {
-                    "details": {
-                        "display_name": "Linux 操作平台 (小脑 PoC)"
-                    }
-                }
+                "data": {"details": {"display_name": "Linux 操作平台 (小脑 PoC)"}},
             }
-        ]
+        ],
     }
     await websocket.send(json.dumps(registration_msg))
     log("Registration message sent.")
@@ -66,16 +68,22 @@ async def handler(websocket: WebSocketServerProtocol, path: str):
 
                 request_id = data.get("event_id")
                 content = data.get("content", [])
-                if not request_id or not content or content[0].get("type") != "action_params":
+                if (
+                    not request_id
+                    or not content
+                    or content[0].get("type") != "action_params"
+                ):
                     continue
 
                 action_params_data = content[0].get("data", {})
-                event_type_parts = data.get("event_type", "").split('.')
+                event_type_parts = data.get("event_type", "").split(".")
 
                 if len(event_type_parts) < 3:
                     continue
 
-                method = event_type_parts[2] # e.g., action.linux_mcp.click_tool -> click_tool
+                method = event_type_parts[
+                    2
+                ]  # e.g., action.linux_mcp.click_tool -> click_tool
 
                 if method in TOOL_MAP:
                     tool_func = TOOL_MAP[method]
@@ -96,9 +104,9 @@ async def handler(websocket: WebSocketServerProtocol, path: str):
                                     "original_event_id": request_id,
                                     "status": "success",
                                     "data": result,
-                                }
+                                },
                             }
-                        ]
+                        ],
                     }
                 else:
                     response = {
@@ -110,9 +118,9 @@ async def handler(websocket: WebSocketServerProtocol, path: str):
                                     "original_event_id": request_id,
                                     "status": "error",
                                     "message": f"Unknown method: {method}",
-                                }
+                                },
                             }
-                        ]
+                        ],
                     }
 
                 await websocket.send(json.dumps(response))
@@ -132,6 +140,7 @@ async def handler(websocket: WebSocketServerProtocol, path: str):
 async def main():
     """启动 WebSocket 服务器（改为启动客户端）。"""
     await connect_to_core()
+
 
 if __name__ == "__main__":
     try:
